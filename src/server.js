@@ -6,14 +6,17 @@ const dotenv = require('dotenv');
 // Import routes
 const userRoutes = require('./Routes/userRoutes')
 const newsRoutes = require('./Routes/newsRoutes')
+const commentRoutes = require('./Routes/commentRoutes');
 
 // Import models
 const User = require('./models/User');
 const News = require('./Models/News');
+const Comment = require('./Models/Comment');
 
 // Load environment variables
 dotenv.config();
 
+// Create Express app
 const app = express();
 
 // Middleware
@@ -35,6 +38,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/decentral
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/news', commentRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

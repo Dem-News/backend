@@ -53,6 +53,48 @@ const newsSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  verifications: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number],
+        default: [0, 0]
+      }
+    }
+  }],
+  flags: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    reason: {
+      type: String,
+      required: true,
+      enum: ['false_information', 'inappropriate', 'spam', 'other']
+    },
+    description: String,
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  verificationStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'flagged'],
+    default: 'pending'
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -61,18 +103,35 @@ const newsSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+  
 });
 
-// Update the updatedAt timestamp before saving
+// Update verification status based on thresholds
+newsSchema.methods.updateVerificationStatus = function() {
+  const VERIFICATION_THRESHOLD = 10;
+  const FLAG_THRESHOLD = 3;
+  
+  if (this.flags.length >= FLAG_THRESHOLD) {
+    this.verificationStatus = 'flagged';
+  } else if (this.verifications.length >= VERIFICATION_THRESHOLD) {
+    this.verificationStatus = 'verified';
+  } else {
+    this.verificationStatus = 'pending';
+  }
+};
+
+// Update the updatedAt timestamp and verification status before saving
 newsSchema.pre('save', function(next) {
+  this.updateVerificationStatus();
   this.updatedAt = Date.now();
   next();
 });
 
-// Create index for location-based queries
+// Create indexes for location-based queries and verification
 newsSchema.index({ location: '2dsphere' });
+newsSchema.index({ verificationStatus: 1 });
+newsSchema.index({ 'verifications.location': '2dsphere' });
 
 const News = mongoose.models.News || mongoose.model('News', newsSchema);
-// const News = mongoose.model('News', newsSchema);
 
-module.exports = News; 
+module.exports = News;
